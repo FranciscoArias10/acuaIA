@@ -107,7 +107,9 @@ async function initApp() {
     }
 
     try {
-        const response = await fetch(getApiUrl('/api/models'));
+        const response = await fetch(getApiUrl('/api/models'), {
+            headers: { 'Bypass-Tunnel-Reminder': 'true' }
+        });
         const data = await response.json();
         
         // Populate architecture selector
@@ -142,7 +144,9 @@ function setupEventListeners() {
         updateModelMeta(arch);
         
         // Re-fetch model info to get available variants
-        const response = await fetch(getApiUrl('/api/models'));
+        const response = await fetch(getApiUrl('/api/models'), {
+            headers: { 'Bypass-Tunnel-Reminder': 'true' }
+        });
         const data = await response.json();
         updateVariants(data.available_models);
         
@@ -274,7 +278,10 @@ async function loadSelectedModel() {
     try {
         const response = await fetch(getApiUrl('/api/select-model'), {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Bypass-Tunnel-Reminder': 'true'
+            },
             body: JSON.stringify({ architecture, variant })
         });
         
@@ -678,7 +685,10 @@ async function sendPrediction(base64Image) {
     try {
         const response = await fetch(getApiUrl('/api/predict'), {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Bypass-Tunnel-Reminder': 'true'
+            },
             body: JSON.stringify({ image: base64Image })
         });
         
