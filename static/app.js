@@ -37,7 +37,7 @@ let inferenceMode = 'photo'; // 'photo' or 'realtime'
 let isModelLoading = false;
 let isPredicting = false;
 let realtimeInterval = null;
-let backendUrl = localStorage.getItem('backend_url') || '';
+let backendUrl = localStorage.getItem('backend_url') || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? '' : 'https://aquascan-francisco.loca.lt');
 
 // DOM Elements
 const archSelect = document.getElementById('arch-select');
