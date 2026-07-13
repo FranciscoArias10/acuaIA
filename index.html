@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AquaScan AI - Diagnóstico de Camarón por Cámara</title>
+    <!-- Google Fonts for premium typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/style.css?v=1.0.3">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Main Header Banner -->
+        <header class="header-container">
+            <div class="logo-area">
+                <i class="fa-solid fa-shrimp logo-icon"></i>
+                <h1 class="main-title">AquaScan AI</h1>
+            </div>
+            <p class="sub-title">
+                Plataforma inteligente de diagnóstico patológico para camarón de cultivo (*Penaeus vannamei*).
+                Analice imágenes de forma estática o en tiempo real mediante la cámara de su computadora con redes neuronales profundas.
+            </p>
+        </header>
+
+        <!-- Model Configuration Toolbar -->
+        <section class="config-toolbar">
+            <div class="toolbar-item toolbar-title">
+                <i class="fa-solid fa-gears card-icon"></i>
+                <span>Configuración:</span>
+            </div>
+            
+            <div class="toolbar-item">
+                <label for="arch-select" class="toolbar-label">CNN:</label>
+                <div class="select-wrapper compact-select">
+                    <select id="arch-select" class="custom-select compact">
+                        <!-- Options populated dynamically by JS -->
+                        <option value="" disabled selected>Cargando...</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="toolbar-item">
+                <label for="variant-select" class="toolbar-label">Pesos:</label>
+                <div class="select-wrapper compact-select">
+                    <select id="variant-select" class="custom-select compact">
+                        <!-- Options populated dynamically by JS -->
+                        <option value="" disabled selected>Seleccione CNN</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="toolbar-item">
+                <label for="backend-url-input" class="toolbar-label">Servidor:</label>
+                <input type="text" id="backend-url-input" class="custom-input compact" placeholder="Local (defecto)" title="URL del túnel o backend en tu PC (ej. https://xxxx.localtunnel.me)" style="min-width: 200px;" />
+            </div>
+
+            <div class="toolbar-item model-meta-inline" id="model-meta-info">
+                <span class="meta-inline-item">
+                    <span class="meta-label">Parámetros:</span>
+                    <span class="meta-val" id="meta-params">-</span>
+                </span>
+                <span class="meta-inline-item">
+                    <span class="meta-label">Velocidad:</span>
+                    <span class="meta-val" id="meta-speed">-</span>
+                </span>
+                <span class="meta-inline-desc" id="meta-desc">Seleccione un modelo para ver sus características.</span>
+            </div>
+        </section>
+
+        <!-- Main Workspace Layout -->
+        <main class="main-grid">
+            
+            <!-- LEFT COLUMN: Camera and Model Controls -->
+            <section class="control-column">
+                
+                <!-- Video Input Card -->
+                <div class="custom-card">
+                    <div class="card-header">
+                        <i class="fa-solid fa-camera card-icon"></i>
+                        <h2 class="card-title">Cámara y Adquisición</h2>
+                    </div>
+
+                    <!-- Mode Toggle Switches -->
+                    <div class="mode-selector">
+                        <button type="button" class="mode-btn active" id="mode-photo-btn">
+                            <i class="fa-solid fa-camera"></i> Cámara (Foto)
+                        </button>
+                        <button type="button" class="mode-btn" id="mode-stream-btn">
+                            <i class="fa-solid fa-video"></i> Tiempo Real
+                        </button>
+                        <button type="button" class="mode-btn" id="mode-upload-btn">
+                            <i class="fa-solid fa-upload"></i> Subir Imagen
+                        </button>
+                    </div>
+
+                    <!-- Camera selector if multiple are available -->
+                    <div class="control-group" id="camera-select-group" style="margin-top: 1rem;">
+                        <label for="camera-select" class="control-label">Dispositivo de Video:</label>
+                        <div class="select-wrapper">
+                            <select id="camera-select" class="custom-select">
+                                <option value="">Buscando cámaras...</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Camera Container -->
+                    <div class="camera-container" id="camera-container">
+                        <video id="webcam" autoplay playsinline muted></video>
+                        <img id="image-preview" style="display: none; width: 100%; height: 100%; object-fit: contain; background-color: #090d12;" />
+                        
+                        <div class="upload-zone" id="upload-zone" style="display: none;">
+                            <i class="fa-solid fa-cloud-arrow-up upload-icon"></i>
+                            <p class="upload-text">Arrastre una imagen de camarón aquí o haga clic para seleccionar</p>
+                            <span class="upload-hint">Formatos soportados: PNG, JPG, JPEG</span>
+                        </div>
+
+                        <!-- Scan Overlay -->
+                        <div class="scan-overlay" id="scan-overlay" style="display: none;">
+                            <div class="scan-box" id="scan-box">
+                                <div class="scan-corner top-left"></div>
+                                <div class="scan-corner top-right"></div>
+                                <div class="scan-corner bottom-left"></div>
+                                <div class="scan-corner bottom-right"></div>
+                                <div class="scan-hud-info">
+                                    <span class="scan-class" id="scan-class">ESCANEANDO...</span>
+                                    <span class="scan-conf" id="scan-conf"></span>
+                                </div>
+                                <div class="scan-line"></div>
+                            </div>
+                        </div>
+                        <div class="camera-placeholder" id="camera-placeholder">
+                            <i class="fa-solid fa-video-slash placeholder-icon"></i>
+                            <p>La cámara está apagada</p>
+                        </div>
+                        <div class="realtime-indicator" id="realtime-indicator" style="display: none;">
+                            <span class="pulse-dot"></span> EN VIVO
+                        </div>
+                    </div>
+
+                    <!-- Action buttons -->
+                    <div class="btn-group">
+                        <button id="toggle-camera-btn" class="action-btn btn-primary">
+                            <i class="fa-solid fa-power-off"></i> Iniciar Cámara
+                        </button>
+                        <button id="resume-camera-btn" class="action-btn btn-primary" style="display: none;">
+                            <i class="fa-solid fa-camera-rotate"></i> Cámara en Vivo
+                        </button>
+                        <button id="upload-new-btn" class="action-btn btn-primary" style="display: none;">
+                            <i class="fa-solid fa-file-image"></i> Cargar otra Imagen
+                        </button>
+                        <button id="capture-btn" class="action-btn btn-success" disabled>
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Analizar Imagen
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- RIGHT COLUMN: Real-time Diagnostics -->
+            <section class="diagnostic-column">
+                
+                <!-- Main Diagnostic Panel -->
+                <div class="custom-card diagnostic-card" id="main-result-card">
+                    <div class="card-header">
+                        <i class="fa-solid fa-heart-pulse card-icon"></i>
+                        <h2 class="card-title">Resultado del Diagnóstico</h2>
+                    </div>
+
+                    <div class="diagnostic-empty-state" id="result-empty-state">
+                        <i class="fa-solid fa-hourglass-half empty-icon"></i>
+                        <p>Esperando imagen o transmisión de cámara para iniciar el análisis.</p>
+                        <span class="empty-hint">Encienda la cámara y presione "Analizar Imagen" o active el modo "Tiempo Real".</span>
+                    </div>
+
+                    <div class="diagnostic-results-content" id="result-content" style="display: none;">
+                        <div class="result-badge-container">
+                            <span class="result-label">Diagnóstico Detectado:</span>
+                            <div class="badge" id="predicted-badge">SANO</div>
+                        </div>
+
+                        <div class="metrics-grid">
+                            <div class="metric-card">
+                                <span class="metric-label">Confianza de IA:</span>
+                                <span class="metric-value" id="confidence-value">0.00%</span>
+                            </div>
+                            <div class="metric-card">
+                                <span class="metric-label">Latencia Inferencia:</span>
+                                <span class="metric-value metric-dim" id="latency-value">0.0 ms</span>
+                            </div>
+                        </div>
+
+                        <!-- Class Probability Distribution Bars -->
+                        <div class="prob-distribution-section">
+                            <h3 class="section-subtitle">Distribución de Confianza:</h3>
+                            <div class="prob-list" id="prob-list">
+                                <!-- Populated dynamically by JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Hidden canvas for capturing video frames -->
+        <canvas id="capture-canvas" width="640" height="480" style="display: none;"></canvas>
+        <input type="file" id="file-input" accept="image/*" style="display: none;" />
+
+        <!-- EDUCATIONAL GUIDE SECTION -->
+        <section class="guide-section">
+            <h2 class="guide-title">Guía de Patologías y Referencia de Enfermedades</h2>
+            <div class="tabs-container">
+                <div class="tabs-header">
+                    <button class="tab-btn active" data-tab="tab-healthy">Sano (Healthy)</button>
+                    <button class="tab-btn" data-tab="tab-bg">Branquia Negra (BG)</button>
+                    <button class="tab-btn" data-tab="tab-wssv">Mancha Blanca (WSSV)</button>
+                    <button class="tab-btn" data-tab="tab-coinfect">Coinfección (BG + WSSV)</button>
+                </div>
+                <div class="tabs-content">
+                    
+                    <!-- SANO TAB -->
+                    <div class="tab-pane active" id="tab-healthy">
+                        <div class="pane-grid">
+                            <div>
+                                <h3 class="pane-title text-healthy"><i class="fa-solid fa-circle-check"></i> Camarón Sano</h3>
+                                <p class="pane-text">
+                                    Un espécimen saludable exhibe branquias limpias, translúcidas y sin acumulaciones de coloraciones oscuras. 
+                                    El caparazón es brillante, liso, duro y libre de calcificaciones anormales. El tracto digestivo debe lucir lleno 
+                                    (indicación de apetito normal) y el comportamiento general del camarón incluye nado rápido en respuesta a estímulos y 
+                                    buena tasa de muda.
+                                </p>
+                                <div class="guide-action-plan" style="margin-top: 1.5rem;">
+                                    <h4 style="font-size: 1rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem;"><i class="fa-solid fa-clipboard-list" style="color: #2ecc71;"></i> Plan de Acción Recomendado (IA):</h4>
+                                    <ul style="padding-left: 1.2rem; font-size: 0.9rem; color: var(--text-secondary); display: flex; flex-direction: column; gap: 0.4rem;">
+                                        <li>Mantener los parámetros físico-químicos del agua en rangos óptimos (oxígeno, pH, salinidad).</li>
+                                        <li>Continuar con la alimentación programada regular.</li>
+                                        <li>Realizar monitoreos de control de biomasa rutinarios.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="guide-best-practices">
+                                <h4>Buenas Prácticas en el Cultivo:</h4>
+                                <ul>
+                                    <li>Mantener niveles estables de oxígeno disuelto (> 4.0 ppm en la madrugada).</li>
+                                    <li>Implementar bioseguridad estricta en las entradas de agua (mallas de exclusión de portadores de virus).</li>
+                                    <li>Utilizar probióticos en agua y alimento balanceado para optimizar la salud intestinal del camarón.</li>
+                                    <li>Realizar análisis patológicos por microscopía semanales a nivel de hepatopáncreas e intestino.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- BRANQUIA NEGRA TAB -->
+                    <div class="tab-pane" id="tab-bg">
+                        <div class="pane-grid">
+                            <div>
+                                <h3 class="pane-title text-bg"><i class="fa-solid fa-circle-exclamation"></i> Branquia Negra (Black Gill)</h3>
+                                <p class="pane-text">
+                                    La coloración negra en las branquias no representa una enfermedad única, sino una manifestación patológica o un síntoma
+                                    secundario provocado por daños en el tejido respiratorio. El oscurecimiento se debe al depósito de melanina en sitios de 
+                                    inflamación branquial. Puede deberse a infecciones por hongos <i>Fusarium solani</i>, bacterias del género <i>Vibrio</i>, o
+                                    la acumulación mecánica de detritos y lodos negros procedentes del suelo del estanque.
+                                </p>
+                                <div class="guide-action-plan" style="margin-top: 1.5rem;">
+                                    <h4 style="font-size: 1rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem;"><i class="fa-solid fa-clipboard-list" style="color: #e67e22;"></i> Plan de Acción Recomendado (IA):</h4>
+                                    <ul style="padding-left: 1.2rem; font-size: 0.9rem; color: var(--text-secondary); display: flex; flex-direction: column; gap: 0.4rem;">
+                                        <li>Revisar el estado del suelo y realizar sifoneo de materia orgánica acumulada en el fondo de la piscina.</li>
+                                        <li>Incrementar la aireación artificial para apoyar la respiración de los camarones afectados.</li>
+                                        <li>Evaluar el uso de probióticos biorremediadores para degradar lodos.</li>
+                                        <li>Verificar niveles de vitamina C en el alimento balanceado.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="guide-best-practices">
+                                <h4>Diagnóstico y Tratamiento en Piscina:</h4>
+                                <ul>
+                                    <li><b>Microscopía:</b> Observar filamentos branquiales al microscopio para identificar hifas de <i>Fusarium</i> o detritos acumulados.</li>
+                                    <li><b>Manejo de Suelos:</b> Aumentar la tasa de secado y desinfección de fondos durante los vacíos sanitarios.</li>
+                                    <li><b>Tratamientos Correctivos:</b> Aplicar zeolitas o carbono activo para fijar sedimentos flotantes, junto con la aplicación de bacterias nitrificantes para digerir la materia orgánica acumulada.</li>
+                                    <li><b>Dieta:</b> Complementar el alimento con vitamina C (ácido ascórbico) para favorecer la cicatrización y regeneración branquial.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- MANCHA BLANCA TAB -->
+                    <div class="tab-pane" id="tab-wssv">
+                        <div class="pane-grid">
+                            <div>
+                                <h3 class="pane-title text-wssv"><i class="fa-solid fa-circle-radiation"></i> Virus de la Mancha Blanca (WSSV)</h3>
+                                <p class="pane-text">
+                                    El Virus del Síndrome de la Mancha Blanca (WSSV) es un virus de ADN de doble cadena que afecta a la mayoría de los crustáceos 
+                                    decápodos. Su manifestación principal son manchas blancas calcáreas de 0.5 a 2.0 mm de diámetro en la cara interna del caparazón, 
+                                    más notorias en la cutícula del cefalotórax y el abdomen. El virus causa necrosis sistémica en tejidos ectodérmicos y mesodérmicos.
+                                    Puede inducir una mortalidad acumulada de hasta el 100% dentro de los 3 a 10 días posteriores a los primeros signos.
+                                </p>
+                                <div class="guide-action-plan" style="margin-top: 1.5rem;">
+                                    <h4 style="font-size: 1rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem;"><i class="fa-solid fa-clipboard-list" style="color: #e74c3c;"></i> Plan de Acción Recomendado (IA):</h4>
+                                    <ul style="padding-left: 1.2rem; font-size: 0.9rem; color: var(--text-secondary); display: flex; flex-direction: column; gap: 0.4rem;">
+                                        <li>Reportar inmediatamente al departamento técnico de sanidad acuícola.</li>
+                                        <li>Aislar la piscina afectada para prevenir la contaminación cruzada a otras piscinas.</li>
+                                        <li>Suspender la entrada de agua nueva y el recambio para evitar propagación del virus.</li>
+                                        <li>Preparar protocolo de cosecha de emergencia si la biomasa tiene tallas comerciales.</li>
+                                        <li>Aplicar desinfección rigurosa de herramientas y calzado.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="guide-best-practices">
+                                <h4>Protocolo de Emergencia:</h4>
+                                <ul>
+                                    <li><b>Monitoreo PCR:</b> Confirmar la presencia de WSSV mediante pruebas diagnósticas moleculares por PCR.</li>
+                                    <li><b>Aislamiento de Piscina:</b> Clausurar la piscina afectada. Desinfectar herramientas y redes de pesca con cloro activo.</li>
+                                    <li><b>Control de Recambios:</b> Cancelar por completo los recambios de agua para evitar exportar virus a estanques contiguos.</li>
+                                    <li><b>Cosecha Sanitaria:</b> Si la población de camarones tiene una talla comercial y el porcentaje de supervivencia estimada lo justifica, proceder a una cosecha rápida.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- COINFECCION TAB -->
+                    <div class="tab-pane" id="tab-coinfect">
+                        <div class="pane-grid">
+                            <div>
+                                <h3 class="pane-title text-coinfect"><i class="fa-solid fa-triangle-exclamation"></i> Coinfección (BG + WSSV)</h3>
+                                <p class="pane-text">
+                                    La coinfección simultánea de Branquia Negra (BG) y el Virus de la Mancha Blanca (WSSV) representa el escenario patológico más 
+                                    grave y letal en un estanque camaronero. Mientras que el WSSV provoca fallas sistémicas a nivel inmunitario y celular, la 
+                                    Branquia Negra obstruye severamente el intercambio de gases (respiración), impidiendo que el camarón pueda asimilar oxígeno de 
+                                    forma adecuada. Esta combinación resulta en un colapso inminente de la biomasa afectada debido a la asfixia y el shock vírico.
+                                </p>
+                                <div class="guide-action-plan" style="margin-top: 1.5rem;">
+                                    <h4 style="font-size: 1rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem;"><i class="fa-solid fa-clipboard-list" style="color: #9b59b6;"></i> Plan de Acción Recomendado (IA):</h4>
+                                    <ul style="padding-left: 1.2rem; font-size: 0.9rem; color: var(--text-secondary); display: flex; flex-direction: column; gap: 0.4rem;">
+                                        <li>Iniciar cuarentena estricta y absoluta de la piscina afectada.</li>
+                                        <li>Prohibir el traslado de personal, redes o equipos de esta piscina hacia otras.</li>
+                                        <li>Incrementar la aireación al máximo para mitigar la asfixia branquial.</li>
+                                        <li>Planificar de manera urgente una cosecha sanitaria si el camarón tiene peso comercial.</li>
+                                        <li>Efectuar tratamiento de desinfección química (por ejemplo, con cloro activo) antes de liberar aguas.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="guide-best-practices">
+                                <h4>Medidas de Manejo Crítico:</h4>
+                                <ul>
+                                    <li><b>Monitoreo de Emergencia:</b> Inspección visual diaria de los bordes y canales de alimentación del estanque.</li>
+                                    <li><b>Máxima Aireación:</b> Mantener encendidos los aireadores de paletas las 24 horas del día para maximizar la solubilidad del oxígeno.</li>
+                                    <li><b>Decisión de Cosecha Urgente:</b> Se aconseja iniciar de manera prioritaria e inmediata la cosecha de la piscina para prevenir que los camarones muertos en el fondo se descompongan y arruinen el suelo.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="footer-container">
+            <p>AquaScan AI © 2026 - Desarrollado para el análisis y control inteligente de patologías en la acuicultura.</p>
+        </footer>
+    </div>
+
+    <!-- Main Client-side Script -->
+    <script src="/static/app.js"></script>
+</body>
+</html>
