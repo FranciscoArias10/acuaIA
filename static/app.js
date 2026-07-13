@@ -97,6 +97,15 @@ async function initApp() {
     if (backendUrlInput) {
         backendUrlInput.value = backendUrl;
     }
+    
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    if (!isLocal && !backendUrl) {
+        if (metaDesc) {
+            metaDesc.innerHTML = `<span style="color:#e67e22;"><i class="fa-solid fa-circle-info"></i> Configura la URL del túnel en el campo 'SERVIDOR'.</span>`;
+        }
+        return;
+    }
+
     try {
         const response = await fetch(getApiUrl('/api/models'));
         const data = await response.json();
