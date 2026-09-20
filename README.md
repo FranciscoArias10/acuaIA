@@ -95,4 +95,4 @@ Francisco Arias
 
 ## Estado
 
-Proyecto en desarrollo activo, enfocado en una interfaz de diagnóstico basada en IA para acuicultura.
+Proyecto sin desarrollo activo en este momento. Se conserva como referencia y base para futuras mejoras o continuaciones.
